@@ -1,59 +1,124 @@
 import { ApolloServer } from "@apollo/server";
-import { startStandaloneServer } from "@apollo/server/standalone";
+import { expressMiddleware } from "@apollo/server/express4";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import dotenv from "dotenv";
+import express from "express";
+import { readFileSync } from "fs";
+import { PubSub } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
+import { useServer } from "graphql-ws/lib/use/ws";
+import http from "http";
+import { WebSocketServer } from "ws";
+import { Message, Resolvers } from "./generated/graphql";
+
+export interface Context {
+  pubsub: PubSub;
+  userId: string;
+}
 
 dotenv.config({ path: "../../../.env" });
 
-const typeDefs = gql`
-  type Query {
-    group(id: ID!): Group
-  }
+const typeDefs = gql(
+  readFileSync(__dirname + "/messages.graphql", { encoding: "utf-8" })
+);
 
-  type Mutation {
-    sendMessage(groupId: ID!, content: String!): Message!
-  }
-
-  type Subscription {
-    messageSent(groupId: ID!): Message!
-  }
-
-  type Group {
-    id: ID!
-    name: String!
-    members: [User]!
-    messages: [Message!]!
-  }
-
-  type Message {
-    id: ID!
-    content: String!
-    sender: User
-    createdAt: DateTime!
-  }
-`;
-
-const users = [
-  { id: "1", name: "Alicee", online: true },
-  { id: "2", name: "Bob", online: false },
+const groups = [
+  {
+    id: "1",
+    name: "Chat Group",
+    members: [{ id: "alice" }],
+    messages: [
+      { content: "hi", createdAt: new Date(), id: "1", sender: { id: "1" } },
+    ],
+  },
 ];
 
-const resolvers = {
-  User: {
-    __resolveReference(user: { id: string }) {
-      return users.find((u) => u.id === user.id);
+let messageId = 1;
+
+const resolvers: Resolvers<Context> = {
+  Query: {
+    group: async (_, { id }) => {
+      const group = groups.find((group) => group.id === id);
+      return group || null;
     },
   },
-  Query: {
-    users: () => users,
+  Mutation: {
+    sendMessage: async (_, { groupId, content }, { pubsub, userId }) => {
+      const group = groups.find((group) => group.id === groupId);
+      if (!group) {
+        throw new Error("Group not found");
+      }
+
+      const newMessage = {
+        id: String(messageId++),
+        content,
+        sender: { id: userId },
+        createdAt: new Date(),
+      };
+
+      // group.messages.push(newMessage);
+
+      pubsub.publish(groupId, newMessage);
+
+      return newMessage;
+    },
+  },
+  Subscription: {
+    messageSent: {
+      subscribe: (_, { groupId }, { pubsub }) => {
+        const iterator = pubsub.asyncIterator(groupId);
+        return {
+          [Symbol.asyncIterator]: () => iterator,
+        };
+      },
+      resolve: (message: Message) => message,
+    },
   },
 };
 
-const server = new ApolloServer({
-  schema: buildSubgraphSchema([{ typeDefs, resolvers }]),
-});
+const schema = buildSubgraphSchema([{ typeDefs, resolvers }]);
 
-startStandaloneServer(server, { listen: { port: 4002 } }).then(({ url }) =>
-  console.log(`🚀  Server ready at ${url}`)
-);
+async function startServer() {
+  const app = express();
+  const httpServer = http.createServer(app);
+
+  const server = new ApolloServer<Context>({
+    schema,
+  });
+
+  await server.start();
+
+  const pubsub = new PubSub();
+
+  app.use(
+    "/graphql",
+    express.json(),
+    expressMiddleware(server, {
+      context: async ({ req }): Promise<Context> => {
+        return { pubsub, userId: req.headers.authorization || "" };
+      },
+    })
+  );
+
+  const wsServer = new WebSocketServer({
+    server: httpServer,
+    path: "/graphql",
+  });
+
+  useServer(
+    {
+      schema,
+      context: () => ({ pubsub }),
+    },
+    wsServer
+  );
+
+  const PORT = 4002;
+
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
+    console.log(`🚀 Subscriptions ready at ws://localhost:${PORT}/graphql`);
+  });
+}
+
+startServer();

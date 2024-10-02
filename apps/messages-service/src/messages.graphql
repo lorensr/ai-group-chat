@@ -1,0 +1,33 @@
+directive @key(fields: String!) on OBJECT | INTERFACE
+
+scalar DateTime
+
+type Query {
+  group(id: ID!): Group
+}
+
+type Mutation {
+  sendMessage(groupId: ID!, content: String!): Message!
+}
+
+type Subscription {
+  messageSent(groupId: ID!): Message!
+}
+
+type Group {
+  id: ID!
+  name: String!
+  members: [User]!
+  messages: [Message!]!
+}
+
+type Message {
+  id: ID!
+  content: String!
+  sender: User
+  createdAt: DateTime!
+}
+
+type User @key(fields: "id") {
+  id: ID!
+}
