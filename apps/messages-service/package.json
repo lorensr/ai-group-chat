@@ -6,10 +6,11 @@
     "dev": "ts-node-dev src/index.ts",
     "build": "tsc --build",
     "start": "node dist/index.js",
-    "lint": "eslint . --max-warnings 0",
-    "generate": "graphql-codegen"
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
+    "@repo/durable-functions": "*",
+    "@repo/common": "*",
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.0.0",
     "@graphql-tools/schema": "^10.0.6",
@@ -24,9 +25,6 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@graphql-codegen/cli": "^5.0.2",
-    "@graphql-codegen/typescript": "^4.0.9",
-    "@graphql-codegen/typescript-resolvers": "^4.2.1",
     "ts-node-dev": "^2.0.0"
   }
 }

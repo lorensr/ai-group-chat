@@ -14,7 +14,8 @@ import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
 import { v4 as uuidv4 } from "uuid";
 import { WebSocketServer } from "ws";
-import { Message, Resolvers } from "./generated/graphql";
+import { Message, Resolvers } from "@repo/common";
+import { getState } from "@repo/durable-functions";
 
 export interface Context {
   pubsub: PubSub;
@@ -25,7 +26,9 @@ export interface Context {
 dotenv.config({ path: "../../../.env" });
 
 const typeDefs = gql(
-  readFileSync(__dirname + "/messages.graphql", { encoding: "utf-8" })
+  readFileSync(__dirname + "/../../common/src/messages.graphql", {
+    encoding: "utf-8",
+  })
 );
 
 const resolvers: Resolvers<Context> = {
@@ -33,7 +36,7 @@ const resolvers: Resolvers<Context> = {
     group: async (_, { id }, { temporal }) => {
       const groupFn = temporal.workflow.getHandle(id);
       try {
-        return await groupFn.query("getState");
+        return await groupFn.query(getState);
       } catch (e) {
         if (e instanceof WorkflowNotFoundError) {
           return null;

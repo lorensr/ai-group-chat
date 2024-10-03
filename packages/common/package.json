@@ -1,0 +1,20 @@
+{
+  "name": "@repo/common",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "generate": "graphql-codegen"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@temporalio/workflow": "^1.11.2",
+    "eslint": "^8.57.0",
+    "typescript": "^5.3.3",
+    "@graphql-codegen/cli": "^5.0.2",
+    "@graphql-codegen/typescript": "^4.0.9",
+    "@graphql-codegen/typescript-resolvers": "^4.2.1"
+  }
+}
