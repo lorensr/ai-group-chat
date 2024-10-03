@@ -7,6 +7,7 @@ type Query {
 }
 
 type Mutation {
+  createGroup(name: String!): Group!
   sendMessage(groupId: ID!, content: String!): Message!
 }
 

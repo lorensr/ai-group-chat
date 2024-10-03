@@ -1,0 +1,9 @@
+{
+  "name": "router",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "docker:build": "docker build -t router .",
+    "dev": "docker run -it --env-file ../../.env -p4000:4000 router"
+  }
+}

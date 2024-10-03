@@ -36,7 +36,13 @@ export type Message = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  createGroup: Group;
   sendMessage: Message;
+};
+
+
+export type MutationCreateGroupArgs = {
+  name: Scalars['String']['input'];
 };
 
 
@@ -199,6 +205,7 @@ export type MessageResolvers<ContextType = Context, ParentType extends Resolvers
 };
 
 export type MutationResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
+  createGroup?: Resolver<ResolversTypes['Group'], ParentType, ContextType, RequireFields<MutationCreateGroupArgs, 'name'>>;
   sendMessage?: Resolver<ResolversTypes['Message'], ParentType, ContextType, RequireFields<MutationSendMessageArgs, 'content' | 'groupId'>>;
 };
 

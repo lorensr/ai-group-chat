@@ -1,6 +1,10 @@
 import { ApolloServer } from "@apollo/server";
-import { expressMiddleware } from "@apollo/server/express4";
+import {
+  expressMiddleware,
+  ExpressContextFunctionArgument,
+} from "@apollo/server/express4";
 import { buildSubgraphSchema } from "@apollo/subgraph";
+import { Client, WorkflowNotFoundError } from "@temporalio/client";
 import dotenv from "dotenv";
 import express from "express";
 import { readFileSync } from "fs";
@@ -8,12 +12,14 @@ import { PubSub } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import { useServer } from "graphql-ws/lib/use/ws";
 import http from "http";
+import { v4 as uuidv4 } from "uuid";
 import { WebSocketServer } from "ws";
 import { Message, Resolvers } from "./generated/graphql";
 
 export interface Context {
   pubsub: PubSub;
   userId: string;
+  temporal: Client;
 }
 
 dotenv.config({ path: "../../../.env" });
@@ -22,45 +28,54 @@ const typeDefs = gql(
   readFileSync(__dirname + "/messages.graphql", { encoding: "utf-8" })
 );
 
-const groups = [
-  {
-    id: "1",
-    name: "Chat Group",
-    members: [{ id: "alice" }],
-    messages: [
-      { content: "hi", createdAt: new Date(), id: "1", sender: { id: "1" } },
-    ],
-  },
-];
-
-let messageId = 1;
-
 const resolvers: Resolvers<Context> = {
   Query: {
-    group: async (_, { id }) => {
-      const group = groups.find((group) => group.id === id);
-      return group || null;
+    group: async (_, { id }, { temporal }) => {
+      const groupFn = temporal.workflow.getHandle(id);
+      try {
+        return await groupFn.query("getState");
+      } catch (e) {
+        if (e instanceof WorkflowNotFoundError) {
+          return null;
+        }
+        throw e;
+      }
     },
   },
   Mutation: {
-    sendMessage: async (_, { groupId, content }, { pubsub, userId }) => {
-      const group = groups.find((group) => group.id === groupId);
-      if (!group) {
-        throw new Error("Group not found");
-      }
-
-      const newMessage = {
-        id: String(messageId++),
+    createGroup: async (_, { name }, { userId, temporal }) => {
+      await temporal.workflow.start(groupChat, {
+        taskQueue: "group-chat",
+        workflowId: name,
+        args: [userId],
+      });
+      return { id: name, name, members: [{ id: userId }], messages: [] };
+    },
+    sendMessage: async (
+      _,
+      { groupId, content },
+      { pubsub, userId, temporal }
+    ) => {
+      const message = {
+        id: uuidv4(),
         content,
         sender: { id: userId },
         createdAt: new Date(),
       };
 
-      // group.messages.push(newMessage);
+      const groupFn = temporal.workflow.getHandle(groupId);
+      try {
+        await groupFn.signal("sendMessage", message);
+      } catch (e) {
+        if (e instanceof WorkflowNotFoundError) {
+          throw new Error("Group not found");
+        }
+        throw e;
+      }
 
-      pubsub.publish(groupId, newMessage);
+      pubsub.publish(groupId, message);
 
-      return newMessage;
+      return message;
     },
   },
   Subscription: {
@@ -73,6 +88,9 @@ const resolvers: Resolvers<Context> = {
       },
       resolve: (message: Message) => message,
     },
+  },
+  Group: {
+    name: (group) => group.id,
   },
 };
 
@@ -94,8 +112,14 @@ async function startServer() {
     "/graphql",
     express.json(),
     expressMiddleware(server, {
-      context: async ({ req }): Promise<Context> => {
-        return { pubsub, userId: req.headers.authorization || "" };
+      context: async ({
+        req,
+      }: ExpressContextFunctionArgument): Promise<Context> => {
+        return {
+          pubsub,
+          userId: req.headers.authorization || "",
+          temporal: new Client(),
+        };
       },
     })
   );
