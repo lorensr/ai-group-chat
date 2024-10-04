@@ -1,118 +1,72 @@
+import type * as activities from "@repo/activities";
+import { Group, Message } from "@repo/common";
 import {
-  defineSignal,
-  defineQuery,
-  setHandler,
-  condition,
   ApplicationFailure,
-  sleep,
+  condition,
+  defineQuery,
+  defineSignal,
   proxyActivities,
+  setHandler,
+  sleep,
+  uuid4,
+  workflowInfo,
 } from "@temporalio/workflow";
-import type * as activities from "activities";
 
-type OrderState =
-  | "Charging card"
-  | "Paid"
-  | "Picked up"
-  | "Delivered"
-  | "Refunding";
+export const getState = defineQuery<Group>("getState");
+export const sendMessage = defineSignal<[Message]>("sendMessage");
 
-export interface OrderStatus {
-  productId: number;
-  state: OrderState;
-  deliveredAt?: Date;
-}
-
-export const pickedUpSignal = defineSignal("pickedUp");
-export const deliveredSignal = defineSignal("delivered");
-export const getStatusQuery = defineQuery<OrderStatus>("getStatus");
-
-const { chargeCustomer, refundOrder, sendPushNotification } = proxyActivities<
-  typeof activities
->({
+const { getAiResponse, publishMessage } = proxyActivities<typeof activities>({
   startToCloseTimeout: "1m",
-  retry: {
-    maximumInterval: "5s", // Just for demo purposes. Usually this should be larger.
-  },
 });
 
-export async function order(productId: number): Promise<void> {
-  const product = getProductById(productId);
-  if (!product) {
-    throw ApplicationFailure.create({
-      message: `Product ${productId} not found`,
-    });
-  }
+export async function groupChat(userId: string): Promise<void> {
+  const user = {
+    id: userId,
+  };
 
-  let state: OrderState = "Charging card";
-  let deliveredAt: Date;
+  const group: Group = {
+    id: workflowInfo().workflowId,
+    name: workflowInfo().workflowId,
+    members: [user],
+    messages: [],
+  };
 
-  // setup Signal and Query handlers
-  setHandler(pickedUpSignal, () => {
-    if (state === "Paid") {
-      state = "Picked up";
+  let messagesSentToAi = 0;
+
+  setHandler(getState, () => group);
+
+  setHandler(sendMessage, (message) => {
+    group.messages.push(message);
+
+    const isNewUser = !group.members.some(
+      (member) => member !== null && member.id === message.sender?.id
+    );
+    if (isNewUser && message.sender) {
+      group.members.push(message.sender);
     }
   });
 
-  setHandler(deliveredSignal, () => {
-    if (state === "Picked up") {
-      state = "Delivered";
-      deliveredAt = new Date();
+  while (true) {
+    await condition(() => group.messages.length > messagesSentToAi);
+    messagesSentToAi = group.messages.length;
+
+    // unless it's the first message, wait for 10 seconds to allow others to send messages
+    if (group.messages.length !== 1) {
+      await sleep("10s");
     }
-  });
 
-  setHandler(getStatusQuery, () => {
-    return { state, deliveredAt, productId };
-  });
+    const response = await getAiResponse(group.messages);
+    const aiMessage = {
+      content: response,
+      sender: {
+        id: "OpenAI",
+      },
+      createdAt: new Date(),
+      id: uuid4(),
+    };
 
-  // business logic
-  try {
-    await chargeCustomer(product);
-  } catch (err) {
-    const message = `Failed to charge customer for ${product.name}. Error: ${errorMessage(err)}`;
-    await sendPushNotification(message);
-    throw ApplicationFailure.create({ message });
+    group.messages.push(aiMessage);
+    messagesSentToAi++; // skip over the AI message
+    await publishMessage(aiMessage);
   }
-
-  state = "Paid";
-
-  const notPickedUpInTime = !(await condition(
-    () => state === "Picked up",
-    "1 min"
-  ));
-  if (notPickedUpInTime) {
-    state = "Refunding";
-    await refundAndNotify(
-      product,
-      "⚠️ No drivers were available to pick up your order. Your payment has been refunded."
-    );
-    throw ApplicationFailure.create({ message: "Not picked up in time" });
-  }
-
-  await sendPushNotification("🚗 Order picked up");
-
-  const notDeliveredInTime = !(await condition(
-    () => state === "Delivered",
-    "1 min"
-  ));
-  if (notDeliveredInTime) {
-    state = "Refunding";
-    await refundAndNotify(
-      product,
-      "⚠️ Your driver was unable to deliver your order. Your payment has been refunded."
-    );
-    throw ApplicationFailure.create({ message: "Not delivered in time" });
-  }
-
-  await sendPushNotification("✅ Order delivered!");
-
-  await sleep("1 min"); // this could also be hours or even months
-
-  await sendPushNotification(
-    `✍️ Rate your meal. How was the ${product.name.toLowerCase()}?`
-  );
-}
-
-async function refundAndNotify(product: Product, message: string) {
-  await refundOrder(product);
-  await sendPushNotification(message);
 }

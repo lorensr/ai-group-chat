@@ -9,11 +9,11 @@
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
-    "@repo/durable-functions": "*",
-    "@repo/common": "*",
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.0.0",
     "@graphql-tools/schema": "^10.0.6",
+    "@repo/common": "*",
+    "@repo/durable-functions": "*",
     "@temporalio/client": "^1.11.2",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
@@ -21,6 +21,7 @@
     "graphql-subscriptions": "^2.0.0",
     "graphql-tag": "^2.12.6",
     "graphql-ws": "^5.16.0",
+    "path": "^0.12.7",
     "uuid": "^10.0.0",
     "ws": "^8.18.0"
   },

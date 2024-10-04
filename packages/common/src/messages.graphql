@@ -8,7 +8,14 @@ type Query {
 
 type Mutation {
   createGroup(name: String!): Group!
-  sendMessage(groupId: ID!, content: String!): Message!
+  sendMessage(input: MessageInput!): Message!
+}
+
+input MessageInput {
+  groupId: ID!
+  content: String!
+  id: ID
+  createdAt: DateTime
 }
 
 type Subscription {

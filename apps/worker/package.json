@@ -1,5 +1,5 @@
 {
-  "name": "users-service",
+  "name": "worker",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,11 +9,9 @@
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
-    "@apollo/server": "^4.11.0",
-    "@apollo/subgraph": "^2.0.0",
-    "dotenv": "^16.4.5",
-    "graphql": "^16.6.0",
-    "graphql-tag": "^2.12.6",
+    "@repo/activities": "*",
+    "@repo/durable-functions": "*",
+    "@temporalio/worker": "^1.11.2",
     "path": "^0.12.7"
   },
   "devDependencies": {

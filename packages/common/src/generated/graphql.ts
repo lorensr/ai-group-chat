@@ -34,6 +34,13 @@ export type Message = {
   sender?: Maybe<User>;
 };
 
+export type MessageInput = {
+  content: Scalars['String']['input'];
+  createdAt?: InputMaybe<Scalars['DateTime']['input']>;
+  groupId: Scalars['ID']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   createGroup: Group;
@@ -47,8 +54,7 @@ export type MutationCreateGroupArgs = {
 
 
 export type MutationSendMessageArgs = {
-  content: Scalars['String']['input'];
-  groupId: Scalars['ID']['input'];
+  input: MessageInput;
 };
 
 export type Query = {
@@ -163,6 +169,7 @@ export type ResolversTypes = {
   Group: ResolverTypeWrapper<Group>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
   Message: ResolverTypeWrapper<Message>;
+  MessageInput: MessageInput;
   Mutation: ResolverTypeWrapper<{}>;
   Query: ResolverTypeWrapper<{}>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
@@ -177,6 +184,7 @@ export type ResolversParentTypes = {
   Group: Group;
   ID: Scalars['ID']['output'];
   Message: Message;
+  MessageInput: MessageInput;
   Mutation: {};
   Query: {};
   String: Scalars['String']['output'];
@@ -206,7 +214,7 @@ export type MessageResolvers<ContextType = Context, ParentType extends Resolvers
 
 export type MutationResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   createGroup?: Resolver<ResolversTypes['Group'], ParentType, ContextType, RequireFields<MutationCreateGroupArgs, 'name'>>;
-  sendMessage?: Resolver<ResolversTypes['Message'], ParentType, ContextType, RequireFields<MutationSendMessageArgs, 'content' | 'groupId'>>;
+  sendMessage?: Resolver<ResolversTypes['Message'], ParentType, ContextType, RequireFields<MutationSendMessageArgs, 'input'>>;
 };
 
 export type QueryResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {

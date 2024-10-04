@@ -1,10 +1,7 @@
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import dotenv from "dotenv";
 import { gql } from "graphql-tag";
-
-dotenv.config({ path: "../../../.env" });
 
 const typeDefs = gql`
   extend schema
@@ -16,24 +13,38 @@ const typeDefs = gql`
     online: Boolean!
   }
 
-  type Query {
-    users: [User!]!
+  type Mutation {
+    reportUserActivity(userId: ID!): User!
   }
 `;
 
-const users = [
-  { id: "1", name: "Alicee", online: true },
-  { id: "2", name: "Bob", online: false },
-];
+const userLastSeen = new Map<string, Date>();
 
 const resolvers = {
-  User: {
-    __resolveReference(user: { id: string }) {
-      return users.find((u) => u.id === user.id);
+  Mutation: {
+    reportUserActivity(userId: string) {
+      userLastSeen.set(userId, new Date());
+      return {
+        id: userId,
+      };
     },
   },
-  Query: {
-    users: () => users,
+  User: {
+    __resolveReference({ id }: { id: string }) {
+      const lastSeen = userLastSeen.get(id);
+      if (!lastSeen) {
+        throw new Error("User not found");
+      }
+
+      const lastSeenLessThanOneMinuteAgo =
+        Date.now() - lastSeen.getTime() < 1000 * 60;
+
+      return {
+        id,
+        name: id,
+        online: lastSeenLessThanOneMinuteAgo,
+      };
+    },
   },
 };
 

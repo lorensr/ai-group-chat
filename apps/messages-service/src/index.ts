@@ -1,3 +1,8 @@
+import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+
 import { ApolloServer } from "@apollo/server";
 import {
   expressMiddleware,
@@ -5,7 +10,6 @@ import {
 } from "@apollo/server/express4";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import { Client, WorkflowNotFoundError } from "@temporalio/client";
-import dotenv from "dotenv";
 import express from "express";
 import { readFileSync } from "fs";
 import { PubSub } from "graphql-subscriptions";
@@ -15,7 +19,7 @@ import http from "http";
 import { v4 as uuidv4 } from "uuid";
 import { WebSocketServer } from "ws";
 import { Message, Resolvers } from "@repo/common";
-import { getState } from "@repo/durable-functions";
+import { getState, groupChat } from "@repo/durable-functions";
 
 export interface Context {
   pubsub: PubSub;
@@ -23,10 +27,8 @@ export interface Context {
   temporal: Client;
 }
 
-dotenv.config({ path: "../../../.env" });
-
 const typeDefs = gql(
-  readFileSync(__dirname + "/../../common/src/messages.graphql", {
+  readFileSync(__dirname + "/../../../packages/common/src/messages.graphql", {
     encoding: "utf-8",
   })
 );
@@ -54,29 +56,29 @@ const resolvers: Resolvers<Context> = {
       });
       return { id: name, name, members: [{ id: userId }], messages: [] };
     },
-    sendMessage: async (
-      _,
-      { groupId, content },
-      { pubsub, userId, temporal }
-    ) => {
+    sendMessage: async (_, { input }, { pubsub, userId, temporal }) => {
       const message = {
-        id: uuidv4(),
-        content,
+        id: input.id || uuidv4(),
+        content: input.content,
         sender: { id: userId },
-        createdAt: new Date(),
+        createdAt: input.createdAt || new Date(),
       };
 
-      const groupFn = temporal.workflow.getHandle(groupId);
-      try {
-        await groupFn.signal("sendMessage", message);
-      } catch (e) {
-        if (e instanceof WorkflowNotFoundError) {
-          throw new Error("Group not found");
+      const groupFn = temporal.workflow.getHandle(input.groupId);
+
+      const isHuman = userId !== "OpenAI";
+      if (isHuman) {
+        try {
+          await groupFn.signal("sendMessage", message);
+        } catch (e) {
+          if (e instanceof WorkflowNotFoundError) {
+            throw new Error("Group not found");
+          }
+          throw e;
         }
-        throw e;
       }
 
-      pubsub.publish(groupId, message);
+      pubsub.publish(input.groupId, message);
 
       return message;
     },
