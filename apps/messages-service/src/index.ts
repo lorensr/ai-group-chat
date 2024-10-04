@@ -1,60 +1,60 @@
-import dotenv from "dotenv";
-import path from "path";
+import dotenv from 'dotenv'
+import path from 'path'
 
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
-import { ApolloServer } from "@apollo/server";
+import { ApolloServer } from '@apollo/server'
 import {
   expressMiddleware,
   ExpressContextFunctionArgument,
-} from "@apollo/server/express4";
-import { buildSubgraphSchema } from "@apollo/subgraph";
-import { Client, WorkflowNotFoundError } from "@temporalio/client";
-import express from "express";
-import { readFileSync } from "fs";
-import { PubSub } from "graphql-subscriptions";
-import { gql } from "graphql-tag";
-import { useServer } from "graphql-ws/lib/use/ws";
-import http from "http";
-import { v4 as uuidv4 } from "uuid";
-import { WebSocketServer } from "ws";
-import { Message, Resolvers } from "@repo/common";
-import { getState, groupChat } from "@repo/durable-functions";
+} from '@apollo/server/express4'
+import { buildSubgraphSchema } from '@apollo/subgraph'
+import { Client, WorkflowNotFoundError } from '@temporalio/client'
+import express from 'express'
+import { readFileSync } from 'fs'
+import { PubSub } from 'graphql-subscriptions'
+import { gql } from 'graphql-tag'
+import { useServer } from 'graphql-ws/lib/use/ws'
+import http from 'http'
+import { v4 as uuidv4 } from 'uuid'
+import { WebSocketServer } from 'ws'
+import { Message, Resolvers } from '@repo/common'
+import { getState, groupChat } from '@repo/durable-functions'
 
 export interface Context {
-  pubsub: PubSub;
-  userId: string;
-  temporal: Client;
+  pubsub: PubSub
+  userId: string
+  temporal: Client
 }
 
 const typeDefs = gql(
-  readFileSync(__dirname + "/../../../packages/common/src/messages.graphql", {
-    encoding: "utf-8",
-  })
-);
+  readFileSync(__dirname + '/../../../packages/common/src/messages.graphql', {
+    encoding: 'utf-8',
+  }),
+)
 
 const resolvers: Resolvers<Context> = {
   Query: {
     group: async (_, { id }, { temporal }) => {
-      const groupFn = temporal.workflow.getHandle(id);
+      const groupFn = temporal.workflow.getHandle(id)
       try {
-        return await groupFn.query(getState);
+        return await groupFn.query(getState)
       } catch (e) {
         if (e instanceof WorkflowNotFoundError) {
-          return null;
+          return null
         }
-        throw e;
+        throw e
       }
     },
   },
   Mutation: {
     createGroup: async (_, { name }, { userId, temporal }) => {
       await temporal.workflow.start(groupChat, {
-        taskQueue: "group-chat",
+        taskQueue: 'group-chat',
         workflowId: name,
         args: [userId],
-      });
-      return { id: name, name, members: [{ id: userId }], messages: [] };
+      })
+      return { id: name, name, members: [{ id: userId }], messages: [] }
     },
     sendMessage: async (_, { input }, { pubsub, userId, temporal }) => {
       const message = {
@@ -62,34 +62,34 @@ const resolvers: Resolvers<Context> = {
         content: input.content,
         sender: { id: userId },
         createdAt: input.createdAt || new Date(),
-      };
+      }
 
-      const groupFn = temporal.workflow.getHandle(input.groupId);
+      const groupFn = temporal.workflow.getHandle(input.groupId)
 
-      const isHuman = userId !== "OpenAI";
+      const isHuman = userId !== 'OpenAI'
       if (isHuman) {
         try {
-          await groupFn.signal("sendMessage", message);
+          await groupFn.signal('sendMessage', message)
         } catch (e) {
           if (e instanceof WorkflowNotFoundError) {
-            throw new Error("Group not found");
+            throw new Error('Group not found')
           }
-          throw e;
+          throw e
         }
       }
 
-      pubsub.publish(input.groupId, message);
+      pubsub.publish(input.groupId, message)
 
-      return message;
+      return message
     },
   },
   Subscription: {
     messageSent: {
       subscribe: (_, { groupId }, { pubsub }) => {
-        const iterator = pubsub.asyncIterator(groupId);
+        const iterator = pubsub.asyncIterator(groupId)
         return {
           [Symbol.asyncIterator]: () => iterator,
-        };
+        }
       },
       resolve: (message: Message) => message,
     },
@@ -97,24 +97,24 @@ const resolvers: Resolvers<Context> = {
   Group: {
     name: (group) => group.id,
   },
-};
+}
 
-const schema = buildSubgraphSchema([{ typeDefs, resolvers }]);
+const schema = buildSubgraphSchema([{ typeDefs, resolvers }])
 
 async function startServer() {
-  const app = express();
-  const httpServer = http.createServer(app);
+  const app = express()
+  const httpServer = http.createServer(app)
 
   const server = new ApolloServer<Context>({
     schema,
-  });
+  })
 
-  await server.start();
+  await server.start()
 
-  const pubsub = new PubSub();
+  const pubsub = new PubSub()
 
   app.use(
-    "/graphql",
+    '/graphql',
     express.json(),
     expressMiddleware(server, {
       context: async ({
@@ -122,32 +122,32 @@ async function startServer() {
       }: ExpressContextFunctionArgument): Promise<Context> => {
         return {
           pubsub,
-          userId: req.headers.authorization || "",
+          userId: req.headers.authorization || '',
           temporal: new Client(),
-        };
+        }
       },
-    })
-  );
+    }),
+  )
 
   const wsServer = new WebSocketServer({
     server: httpServer,
-    path: "/graphql",
-  });
+    path: '/graphql',
+  })
 
   useServer(
     {
       schema,
       context: () => ({ pubsub }),
     },
-    wsServer
-  );
+    wsServer,
+  )
 
-  const PORT = 4002;
+  const PORT = 4002
 
   httpServer.listen(PORT, () => {
-    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
-    console.log(`🚀 Subscriptions ready at ws://localhost:${PORT}/graphql`);
-  });
+    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`)
+    console.log(`🚀 Subscriptions ready at ws://localhost:${PORT}/graphql`)
+  })
 }
 
-startServer();
+startServer()

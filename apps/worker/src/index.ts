@@ -1,22 +1,22 @@
-import dotenv from "dotenv";
-import path from "path";
+import dotenv from 'dotenv'
+import path from 'path'
 
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
-import * as activities from "@repo/activities";
-import { Worker } from "@temporalio/worker";
+import * as activities from '@repo/activities'
+import { Worker } from '@temporalio/worker'
 
 async function run() {
   const worker = await Worker.create({
-    workflowsPath: require.resolve("../../../packages/durable-functions/"),
+    workflowsPath: require.resolve('../../../packages/durable-functions/'),
     activities,
-    taskQueue: "group-chat",
-  });
+    taskQueue: 'group-chat',
+  })
 
-  await worker.run();
+  await worker.run()
 }
 
 run().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+  console.error(err)
+  process.exit(1)
+})
