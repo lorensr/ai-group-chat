@@ -35,7 +35,6 @@ const resolvers: GraphQLResolverMap<any> = {
   },
   User: {
     __resolveReference({ id }: { id: string }) {
-      console.log('resolve id:', id)
       let lastSeen = userLastSeen.get(id)
 
       // AI is always online

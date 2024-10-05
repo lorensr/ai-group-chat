@@ -5,6 +5,7 @@ import {
   ApolloProvider,
   HttpLink,
   InMemoryCache,
+  gql,
   split,
 } from '@apollo/client'
 import { setContext } from '@apollo/client/link/context'
@@ -13,40 +14,60 @@ import { getMainDefinition } from '@apollo/client/utilities'
 import { createClient } from 'graphql-ws'
 import { useState } from 'react'
 import { ChatEntryForm } from '../components/chat-entry-form'
+import { REPORT_USER_ACTIVITY } from '../components/graphql/mutations'
 import { GroupChat } from '../components/group-chat'
 import styles from './page.module.css'
+
+const JOIN_OR_CREATE_GROUP = gql`
+  mutation JoinOrCreateGroup($name: String!) {
+    joinOrCreateGroup(name: $name) {
+      id
+      name
+      members {
+        id
+        name
+        online
+      }
+      messages {
+        id
+        content
+        createdAt
+        sender {
+          id
+          name
+        }
+      }
+    }
+  }
+`
 
 export default function Home() {
   const [groupName, setGroupName] = useState('')
   const [userName, setUserName] = useState('')
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [client, setClient] = useState<ApolloClient<any> | null>(null)
 
-  const handleFormSubmit = (userName: string, groupName: string) => {
+  const handleFormSubmit = async (userName: string, groupName: string) => {
     setUserName(userName)
     setGroupName(groupName)
-    setIsSubmitted(true)
-  }
 
-  if (isSubmitted) {
     const httpLink = new HttpLink({
       uri: 'http://localhost:4000/',
     })
 
-    const authLink = setContext((_, { headers }) => {
-      return {
-        headers: {
-          ...headers,
-          authorization: userName ? userName : '',
-        },
-      }
-    })
+    const authLink = setContext((_, { headers }) => ({
+      headers: {
+        ...headers,
+        authorization: userName,
+      },
+    }))
 
     const wsLink = new GraphQLWsLink(
       createClient({
         url: 'ws://localhost:4000/',
         connectionParams: {
           headers: {
-            authorization: userName ? userName : '',
+            authorization: userName,
           },
         },
       }),
@@ -61,7 +82,7 @@ export default function Home() {
         )
       },
       wsLink,
-      authLink.concat(httpLink), // Ensure authLink is concatenated with httpLink
+      authLink.concat(httpLink),
     )
 
     const client = new ApolloClient({
@@ -69,6 +90,27 @@ export default function Home() {
       cache: new InMemoryCache(),
     })
 
+    try {
+      await client.mutate({
+        mutation: REPORT_USER_ACTIVITY,
+      })
+
+      await client.mutate({
+        mutation: JOIN_OR_CREATE_GROUP,
+        variables: { name: groupName },
+      })
+
+      setClient(client)
+      setIsSubmitted(true)
+    } catch (error) {
+      console.error(
+        'Error during user activity reporting or group joining:',
+        error,
+      )
+    }
+  }
+
+  if (isSubmitted && client) {
     return (
       <div className={styles.page}>
         <main className={styles.main}>
@@ -80,10 +122,15 @@ export default function Home() {
     )
   }
 
+  // Before submission or client initialization
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <ChatEntryForm onSubmit={handleFormSubmit} />
+        {!isSubmitted ? (
+          <ChatEntryForm onSubmit={handleFormSubmit} />
+        ) : (
+          <p>Loading...</p>
+        )}
       </main>
     </div>
   )

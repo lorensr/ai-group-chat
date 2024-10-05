@@ -9,7 +9,7 @@
   display: grid;
   /* grid-template-rows: 20px 1fr 20px; */
   align-items: center;
-  justify-items: center;
+  justify-items: stretch; /* Allows child elements to stretch horizontally */
   min-height: 100svh;
   font-synthesis: none;
 }
@@ -31,7 +31,7 @@
   /* grid-row-start: 2; */
 }
 
-.main ol {
+/* .main ol {
   font-family: var(--font-geist-mono);
   padding-left: 0;
   margin: 0;
@@ -43,7 +43,7 @@
 
 .main li:not(:last-of-type) {
   margin-bottom: 8px;
-}
+} */
 
 .main code {
   font-family: inherit;
