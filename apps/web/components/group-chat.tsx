@@ -1,12 +1,19 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { gql, useMutation, useQuery, useSubscription } from '@apollo/client'
+import {
+  Group,
+  Message,
+  MutationSendMessageArgs,
+  QueryGroupArgs,
+  SubscriptionMessageSentArgs,
+} from '@repo/common'
+import { ChevronDown } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 const REPORT_USER_ACTIVITY = gql`
   mutation ReportUserActivity {
@@ -74,32 +81,43 @@ export function GroupChat({
   const lastMessageRef = useRef<HTMLDivElement>(null)
 
   const [reportUserActivity] = useMutation(REPORT_USER_ACTIVITY)
-  const [sendMessage] = useMutation(SEND_MESSAGE)
+  const [sendMessage] = useMutation<
+    { sendMessage: Message },
+    MutationSendMessageArgs
+  >(SEND_MESSAGE)
 
-  const { data, loading, error } = useQuery(GET_GROUP, {
-    variables: { id: groupName },
-  })
+  const { data, loading, error } = useQuery<{ group: Group }, QueryGroupArgs>(
+    GET_GROUP,
+    {
+      variables: { id: groupName },
+    },
+  )
 
   // Subscribe to new messages
-  useSubscription(MESSAGE_SENT, {
-    variables: { groupId: groupName },
-    onSubscriptionData: ({ client, subscriptionData }) => {
-      const newMessage = subscriptionData.data.messageSent
+  useSubscription<{ messageSent: Message }, SubscriptionMessageSentArgs>(
+    MESSAGE_SENT,
+    {
+      variables: { groupId: groupName },
+      onSubscriptionData: ({ client, subscriptionData }) => {
+        const newMessage = subscriptionData.data?.messageSent
+        if (!newMessage) return
 
-      // Update the cache or local state with the new message
-      client.cache.updateQuery(
-        { query: GET_GROUP, variables: { id: groupName } },
-        (data: any) => {
-          return {
-            group: {
-              ...data.group,
-              messages: [...data.group.messages, newMessage],
-            },
-          }
-        },
-      )
+        client.cache.updateQuery<{ group: Group }, QueryGroupArgs>(
+          { query: GET_GROUP, variables: { id: groupName } },
+          (existingData) => {
+            if (!existingData?.group) return existingData
+
+            return {
+              group: {
+                ...existingData.group,
+                messages: [...existingData.group.messages, newMessage],
+              },
+            }
+          },
+        )
+      },
     },
-  })
+  )
 
   useEffect(() => {
     // Report activity immediately on component mount
@@ -157,6 +175,10 @@ export function GroupChat({
     scrollToBottom()
   }, [data?.group?.messages])
 
+  if (loading) return <p>Loading...</p>
+  if (error) return <p>Error: {error.message}</p>
+  if (!data || !data.group) return <p>No group data available.</p>
+
   return (
     <div className="flex h-screen max-w-6xl mx-auto bg-background">
       {/* User list sidebar */}
@@ -167,21 +189,23 @@ export function GroupChat({
         <ScrollArea className="h-[calc(100vh-65px)]">
           <div className="p-4 space-y-4">
             {data.group.members.map((user) => (
-              <div key={user.id} className="flex items-center space-x-3">
+              <div key={user?.id} className="flex items-center space-x-3">
                 <div className="relative">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
                       src="/placeholder.svg?height=40&width=40"
-                      alt={user.name}
+                      alt={user?.name}
                     />
-                    <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    <AvatarFallback>
+                      {user?.name ? user.name[0] : '?'}
+                    </AvatarFallback>
                   </Avatar>
-                  {user.online && (
+                  {user?.online && (
                     <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-background"></span>
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-sm font-medium">{user?.name}</p>
                 </div>
               </div>
             ))}
