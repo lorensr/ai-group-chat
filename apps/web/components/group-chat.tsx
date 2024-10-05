@@ -68,6 +68,14 @@ const MESSAGE_SENT = gql`
   }
 `
 
+const CREATE_GROUP = gql`
+  mutation CreateGroup($name: String!) {
+    createGroup(name: $name) {
+      id
+    }
+  }
+`
+
 export function GroupChat({
   groupName,
   userName,
@@ -85,13 +93,27 @@ export function GroupChat({
     { sendMessage: Message },
     MutationSendMessageArgs
   >(SEND_MESSAGE)
+  const [createGroup] = useMutation<{ createGroup: Group }>(CREATE_GROUP)
 
-  const { data, loading, error } = useQuery<{ group: Group }, QueryGroupArgs>(
-    GET_GROUP,
-    {
-      variables: { id: groupName },
-    },
-  )
+  const { data, loading, error, refetch } = useQuery<
+    { group: Group },
+    QueryGroupArgs
+  >(GET_GROUP, {
+    variables: { id: groupName },
+    pollInterval: 5000,
+  })
+
+  useEffect(() => {
+    if (!loading && (!data || !data.group)) {
+      createGroup({ variables: { name: groupName } })
+        .then(() => {
+          refetch()
+        })
+        .catch((error) => {
+          console.error('Error creating group:', error)
+        })
+    }
+  }, [loading, data, createGroup, groupName, refetch])
 
   // Subscribe to new messages
   useSubscription<{ messageSent: Message }, SubscriptionMessageSentArgs>(
@@ -177,7 +199,7 @@ export function GroupChat({
 
   if (loading) return <p>Loading...</p>
   if (error) return <p>Error: {error.message}</p>
-  if (!data || !data.group) return <p>No group data available.</p>
+  if (!data || !data.group) return <p>Creating group...</p>
 
   return (
     <div className="flex h-screen max-w-6xl mx-auto bg-background">
@@ -223,7 +245,7 @@ export function GroupChat({
             <div className="p-4 space-y-6">
               {data.group.messages.map((message, index) => {
                 const user = data.group.members.find(
-                  (u) => u.id === message.sender?.id,
+                  (u) => u?.id === message.sender?.id,
                 )
                 return (
                   <div

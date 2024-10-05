@@ -28,7 +28,7 @@
 .main {
   display: flex;
   flex-direction: column;
-  grid-row-start: 2;
+  /* grid-row-start: 2; */
 }
 
 .main ol {

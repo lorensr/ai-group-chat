@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState } from 'react'
 
 interface ChatEntryFormProps {
   onSubmit: (_userName: string, _groupName: string) => void
@@ -50,7 +50,7 @@ export function ChatEntryForm({ onSubmit }: ChatEntryFormProps) {
             />
           </div>
           <Button type="submit" className="w-full">
-            Enter Chat
+            Join Chat
           </Button>
         </form>
       </CardContent>

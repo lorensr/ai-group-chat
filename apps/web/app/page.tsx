@@ -3,17 +3,17 @@
 import {
   ApolloClient,
   ApolloProvider,
+  HttpLink,
   InMemoryCache,
   split,
-  HttpLink,
 } from '@apollo/client'
 import { setContext } from '@apollo/client/link/context'
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
 import { getMainDefinition } from '@apollo/client/utilities'
 import { createClient } from 'graphql-ws'
-import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
 import { useState } from 'react'
-import { GroupChat } from '../components/group-chat'
 import { ChatEntryForm } from '../components/chat-entry-form'
+import { GroupChat } from '../components/group-chat'
 import styles from './page.module.css'
 
 export default function Home() {
@@ -29,7 +29,7 @@ export default function Home() {
 
   if (isSubmitted) {
     const httpLink = new HttpLink({
-      uri: 'http://localhost:4002/graphql',
+      uri: 'http://localhost:4000/',
     })
 
     const authLink = setContext((_, { headers }) => {
@@ -43,7 +43,7 @@ export default function Home() {
 
     const wsLink = new GraphQLWsLink(
       createClient({
-        url: 'ws://localhost:4002/graphql',
+        url: 'ws://localhost:4000/',
         connectionParams: {
           headers: {
             authorization: userName ? userName : '',
