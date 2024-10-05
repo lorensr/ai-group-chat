@@ -5,7 +5,9 @@
   "main": "./src/index.ts",
   "scripts": {
     "lint": "eslint . --max-warnings 0",
-    "generate": "graphql-codegen"
+    "generate:composed": "graphql-codegen",
+    "generate:messages": "graphql-codegen -c messages-codegen.yml",
+    "generate": "npm run generate:messages && npm run generate:composed"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

@@ -68,10 +68,25 @@ const MESSAGE_SENT = gql`
   }
 `
 
-const CREATE_GROUP = gql`
-  mutation CreateGroup($name: String!) {
-    createGroup(name: $name) {
+const JOIN_OR_CREATE_GROUP = gql`
+  mutation JoinOrCreateGroup($name: String!) {
+    joinOrCreateGroup(name: $name) {
       id
+      name
+      members {
+        id
+        name
+        online
+      }
+      messages {
+        id
+        content
+        createdAt
+        sender {
+          id
+          name
+        }
+      }
     }
   }
 `
@@ -93,7 +108,9 @@ export function GroupChat({
     { sendMessage: Message },
     MutationSendMessageArgs
   >(SEND_MESSAGE)
-  const [createGroup] = useMutation<{ createGroup: Group }>(CREATE_GROUP)
+  const [joinOrCreateGroup] = useMutation<{ joinOrCreateGroup: Group }>(
+    JOIN_OR_CREATE_GROUP,
+  )
 
   const { data, loading, error, refetch } = useQuery<
     { group: Group },
@@ -105,15 +122,15 @@ export function GroupChat({
 
   useEffect(() => {
     if (!loading && (!data || !data.group)) {
-      createGroup({ variables: { name: groupName } })
+      joinOrCreateGroup({ variables: { name: groupName } })
         .then(() => {
           refetch()
         })
         .catch((error) => {
-          console.error('Error creating group:', error)
+          console.error('Error joining or creating group:', error)
         })
     }
-  }, [loading, data, createGroup, groupName, refetch])
+  }, [loading, data, joinOrCreateGroup, groupName, refetch])
 
   // Subscribe to new messages
   useSubscription<{ messageSent: Message }, SubscriptionMessageSentArgs>(

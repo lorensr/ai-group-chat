@@ -1,5 +1,5 @@
 import type * as activities from '@repo/activities'
-import { Group, Message } from '@repo/common'
+import { Group, Message, User } from '@repo/common/src/generated/message-types'
 import {
   ApplicationFailure,
   condition,
@@ -12,17 +12,16 @@ import {
   workflowInfo,
 } from '@temporalio/workflow'
 
-export const getState = defineQuery<Group>('getState')
-export const sendMessage = defineSignal<[Message]>('sendMessage')
+export const getStateRpc = defineQuery<Group>('getState')
+export const sendMessageRpc = defineSignal<[Message]>('sendMessage')
+export const joinGroupRpc = defineSignal<[string]>('joinGroup')
 
 const { getAiResponse, publishMessage } = proxyActivities<typeof activities>({
   startToCloseTimeout: '1m',
 })
 
 export async function groupChat(userId: string): Promise<void> {
-  const user = {
-    id: userId,
-  }
+  const user = { id: userId }
 
   const group: Group = {
     id: workflowInfo().workflowId,
@@ -31,19 +30,26 @@ export async function groupChat(userId: string): Promise<void> {
     messages: [],
   }
 
+  function addUserToGroup(userId?: string): void {
+    const userExists = group.members.some(
+      (member) => member !== null && member.id === userId,
+    )
+    if (userId && !userExists) {
+      group.members.push({ id: userId })
+    }
+  }
+
   let messagesSentToAi = 0
 
-  setHandler(getState, () => group)
+  setHandler(getStateRpc, () => group)
 
-  setHandler(sendMessage, (message) => {
+  setHandler(sendMessageRpc, (message) => {
     group.messages.push(message)
+    addUserToGroup(message.sender?.id)
+  })
 
-    const isNewUser = !group.members.some(
-      (member) => member !== null && member.id === message.sender?.id,
-    )
-    if (isNewUser && message.sender) {
-      group.members.push(message.sender)
-    }
+  setHandler(joinGroupRpc, (newUserId) => {
+    addUserToGroup(newUserId)
   })
 
   while (true) {

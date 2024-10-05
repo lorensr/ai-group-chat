@@ -1,6 +1,6 @@
 schema: http://localhost:4000
 generates:
-  src/generated/graphql.ts:
+  src/generated/supergraph-types.ts:
     plugins:
       - typescript
       - typescript-resolvers

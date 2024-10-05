@@ -14,7 +14,7 @@ type Subscription {
 }
 
 type Mutation {
-  createGroup(name: String!): Group!
+  joinOrCreateGroup(name: String!): Group!
   sendMessage(input: MessageInput!): Message!
 }
 

@@ -1,4 +1,4 @@
-import { Message } from '@repo/common'
+import { Message } from '@repo/common/src/generated/message-types'
 import { generateText } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { Context } from '@temporalio/activity'

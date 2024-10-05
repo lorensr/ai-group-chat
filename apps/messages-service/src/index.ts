@@ -22,8 +22,8 @@ import { useServer } from 'graphql-ws/lib/use/ws'
 import http from 'http'
 import { v4 as uuidv4 } from 'uuid'
 import { WebSocketServer } from 'ws'
-import { Message, Resolvers } from './generated/message-types'
-import { getState, groupChat } from '@repo/durable-functions'
+import { Message, Resolvers } from '@repo/common/src/generated/message-types'
+import { getStateRpc, groupChat } from '@repo/durable-functions'
 
 export interface Context {
   pubsub: PubSub
@@ -32,7 +32,7 @@ export interface Context {
 }
 
 const typeDefs = gql(
-  readFileSync(__dirname + '/messages.graphql', {
+  readFileSync(__dirname + '/../../../packages/common/src/messages.graphql', {
     encoding: 'utf-8',
   }),
 )
@@ -42,7 +42,7 @@ const resolvers: Resolvers<Context> = {
     group: async (_, { id }, { temporal }) => {
       const groupFn = temporal.workflow.getHandle(id)
       try {
-        return await groupFn.query(getState)
+        return await groupFn.query(getStateRpc)
       } catch (e) {
         if (e instanceof WorkflowNotFoundError) {
           return null
@@ -52,21 +52,28 @@ const resolvers: Resolvers<Context> = {
     },
   },
   Mutation: {
-    createGroup: async (_, { name }, { userId, temporal }) => {
+    joinOrCreateGroup: async (_, { name }, { userId, temporal }) => {
+      const workflowId = name // Use the group name as the workflow ID
+      const groupFn = temporal.workflow.getHandle(workflowId)
+
       try {
+        // Attempt to start a new workflow
         await temporal.workflow.start(groupChat, {
           taskQueue: 'group-chat',
-          workflowId: name,
+          workflowId,
           args: [userId],
         })
       } catch (e) {
         if (e instanceof WorkflowExecutionAlreadyStartedError) {
-          throw new Error('Group already created')
+          // If the workflow already exists, signal to join the group
+          await groupFn.signal('joinGroup', userId)
+        } else {
+          throw e
         }
-        throw e
       }
 
-      return { id: name, name, members: [{ id: userId }], messages: [] }
+      // Return the current state of the group
+      return await groupFn.query(getStateRpc)
     },
     sendMessage: async (_, { input }, { pubsub, userId, temporal }) => {
       const message = {
