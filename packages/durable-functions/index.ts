@@ -54,13 +54,13 @@ export async function groupChat(userId: string): Promise<void> {
 
   while (true) {
     await condition(() => group.messages.length > messagesSentToAi)
-    messagesSentToAi = group.messages.length
 
     // unless it's the first message, wait for 10 seconds to allow others to send messages
     if (group.messages.length !== 1) {
       await sleep('10s')
     }
 
+    messagesSentToAi = group.messages.length
     const response = await getAiResponse(group.messages)
     const aiMessage = {
       content: response,
@@ -71,7 +71,8 @@ export async function groupChat(userId: string): Promise<void> {
       id: uuid4(),
     }
 
-    group.messages.push(aiMessage)
+    // insert the AI message after the messages it's responding to
+    group.messages.splice(messagesSentToAi, 0, aiMessage)
     messagesSentToAi++ // skip over the AI message
     await publishMessage(aiMessage)
   }

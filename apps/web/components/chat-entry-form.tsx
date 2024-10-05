@@ -15,9 +15,9 @@ export function ChatEntryForm({ onSubmit }: ChatEntryFormProps) {
   const [groupName, setGroupName] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Pass the userName and groupName to the parent component
+    console.log('handleSubmit:', userName, groupName)
     onSubmit(userName, groupName)
+    e.preventDefault()
   }
 
   return (

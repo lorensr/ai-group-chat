@@ -62,43 +62,22 @@ export default function Home() {
       },
     }))
 
-    const wsLink = new GraphQLWsLink(
-      createClient({
-        url: 'ws://localhost:4000/',
-        connectionParams: {
-          headers: {
-            authorization: userName,
-          },
-        },
-      }),
-    )
-
-    const splitLink = split(
-      ({ query }) => {
-        const definition = getMainDefinition(query)
-        return (
-          definition.kind === 'OperationDefinition' &&
-          definition.operation === 'subscription'
-        )
-      },
-      wsLink,
-      authLink.concat(httpLink),
-    )
-
     const client = new ApolloClient({
-      link: splitLink,
+      link: authLink.concat(httpLink),
       cache: new InMemoryCache(),
     })
 
     try {
-      await client.mutate({
+      let result = await client.mutate({
         mutation: REPORT_USER_ACTIVITY,
       })
+      console.log('result:', result)
 
       await client.mutate({
         mutation: JOIN_OR_CREATE_GROUP,
         variables: { name: groupName },
       })
+      console.log('result:', result)
 
       setClient(client)
       setIsSubmitted(true)
@@ -112,13 +91,13 @@ export default function Home() {
 
   if (isSubmitted && client) {
     return (
-      <div className={styles.page}>
-        <main className={styles.main}>
-          <ApolloProvider client={client}>
-            <GroupChat groupName={groupName} userName={userName} />
-          </ApolloProvider>
-        </main>
-      </div>
+      // <div className={styles.page}>
+      //   <main className={styles.main}>
+      <ApolloProvider client={client}>
+        <GroupChat groupName={groupName} userName={userName} />
+      </ApolloProvider>
+      //   </main>
+      // </div>
     )
   }
 
