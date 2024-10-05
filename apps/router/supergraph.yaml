@@ -1,8 +1,8 @@
-federation_version: =2.6.0
+federation_version: =2.8.0
 subgraphs:
-  products:
+  messages:
     schema:
-      subgraph_url: http://localhost:4001
+      subgraph_url: http://localhost:4002/graphql
   users:
     schema:
-      subgraph_url: http://localhost:4002
+      subgraph_url: http://localhost:4001/graphql

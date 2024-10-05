@@ -1,9 +1,16 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.8", import: ["@key"])
+
 directive @key(fields: String!) on OBJECT | INTERFACE
 
 scalar DateTime
 
 type Query {
   group(id: ID!): Group
+}
+
+type Subscription {
+  messageSent(groupId: ID!): Message!
 }
 
 type Mutation {
@@ -16,10 +23,6 @@ input MessageInput {
   content: String!
   id: ID
   createdAt: DateTime
-}
-
-type Subscription {
-  messageSent(groupId: ID!): Message!
 }
 
 type Group {

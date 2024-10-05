@@ -24,3 +24,16 @@ telemetry:
   instrumentation:
     spans:
       mode: spec_compliant
+
+headers:
+  all: # Header rules for all subgraphs
+    request:
+      - propagate:
+          matching: .*
+
+subscription:
+  enabled: true
+  mode:
+    passthrough:
+      all:
+        path: /graphql

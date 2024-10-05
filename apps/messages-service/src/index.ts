@@ -9,7 +9,11 @@ import {
   ExpressContextFunctionArgument,
 } from '@apollo/server/express4'
 import { buildSubgraphSchema } from '@apollo/subgraph'
-import { Client, WorkflowNotFoundError } from '@temporalio/client'
+import {
+  Client,
+  WorkflowExecutionAlreadyStartedError,
+  WorkflowNotFoundError,
+} from '@temporalio/client'
 import express from 'express'
 import { readFileSync } from 'fs'
 import { PubSub } from 'graphql-subscriptions'
@@ -49,11 +53,19 @@ const resolvers: Resolvers<Context> = {
   },
   Mutation: {
     createGroup: async (_, { name }, { userId, temporal }) => {
-      await temporal.workflow.start(groupChat, {
-        taskQueue: 'group-chat',
-        workflowId: name,
-        args: [userId],
-      })
+      try {
+        await temporal.workflow.start(groupChat, {
+          taskQueue: 'group-chat',
+          workflowId: name,
+          args: [userId],
+        })
+      } catch (e) {
+        if (e instanceof WorkflowExecutionAlreadyStartedError) {
+          throw new Error('Group already created')
+        }
+        throw e
+      }
+
       return { id: name, name, members: [{ id: userId }], messages: [] }
     },
     sendMessage: async (_, { input }, { pubsub, userId, temporal }) => {
@@ -122,7 +134,7 @@ async function startServer() {
       }: ExpressContextFunctionArgument): Promise<Context> => {
         return {
           pubsub,
-          userId: req.headers.authorization || '',
+          userId: req.headers.authorization || 'no-auth-header-supplied',
           temporal: new Client(),
         }
       },

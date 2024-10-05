@@ -1,6 +1,7 @@
 import { ApolloServer } from '@apollo/server'
 import { startStandaloneServer } from '@apollo/server/standalone'
 import { buildSubgraphSchema } from '@apollo/subgraph'
+import { GraphQLResolverMap } from '@apollo/subgraph/dist/schema-helper/resolverMap'
 import { gql } from 'graphql-tag'
 
 const typeDefs = gql`
@@ -14,35 +15,44 @@ const typeDefs = gql`
   }
 
   type Mutation {
-    reportUserActivity(userId: ID!): User!
+    reportUserActivity: User!
   }
 `
 
 const userLastSeen = new Map<string, Date>()
 
-const resolvers = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const resolvers: GraphQLResolverMap<any> = {
   Mutation: {
-    reportUserActivity(userId: string) {
+    reportUserActivity(_, __, { userId }: { userId: string }) {
       userLastSeen.set(userId, new Date())
       return {
         id: userId,
+        name: userId,
+        online: true,
       }
     },
   },
   User: {
     __resolveReference({ id }: { id: string }) {
-      const lastSeen = userLastSeen.get(id)
+      console.log('resolve id:', id)
+      let lastSeen = userLastSeen.get(id)
+
+      // AI is always online
+      if (id === 'OpenAI') {
+        lastSeen = new Date()
+      }
+
       if (!lastSeen) {
         throw new Error('User not found')
       }
 
-      const lastSeenLessThanOneMinuteAgo =
-        Date.now() - lastSeen.getTime() < 1000 * 60
+      const lastSeenRecently = Date.now() - lastSeen.getTime() < 1000 * 10
 
       return {
         id,
         name: id,
-        online: lastSeenLessThanOneMinuteAgo,
+        online: lastSeenRecently,
       }
     },
   },
@@ -52,6 +62,9 @@ const server = new ApolloServer({
   schema: buildSubgraphSchema([{ typeDefs, resolvers }]),
 })
 
-startStandaloneServer(server, { listen: { port: 4001 } }).then(({ url }) =>
-  console.log(`🚀  Server ready at ${url}`),
-)
+startStandaloneServer(server, {
+  context: async ({ req }) => {
+    return { userId: req.headers.authorization }
+  },
+  listen: { port: 4001 },
+}).then(({ url }) => console.log(`🚀  Server ready at ${url}`))
