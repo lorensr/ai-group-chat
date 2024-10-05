@@ -14,6 +14,10 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "generate": {
+      "dependsOn": ["^generate"],
+      "outputs": ["src/generated/**"]
     }
   }
 }

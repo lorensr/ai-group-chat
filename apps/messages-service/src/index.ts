@@ -22,7 +22,7 @@ import { useServer } from 'graphql-ws/lib/use/ws'
 import http from 'http'
 import { v4 as uuidv4 } from 'uuid'
 import { WebSocketServer } from 'ws'
-import { Message, Resolvers } from '@repo/common'
+import { Message, Resolvers } from './generated/message-types'
 import { getState, groupChat } from '@repo/durable-functions'
 
 export interface Context {
@@ -32,7 +32,7 @@ export interface Context {
 }
 
 const typeDefs = gql(
-  readFileSync(__dirname + '/../../../packages/common/src/messages.graphql', {
+  readFileSync(__dirname + '/messages.graphql', {
     encoding: 'utf-8',
   }),
 )

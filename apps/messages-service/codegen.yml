@@ -1,6 +1,6 @@
-schema: http://localhost:4000
+schema: src/messages.graphql
 generates:
-  src/generated/graphql.ts:
+  src/generated/message-types.ts:
     plugins:
       - typescript
       - typescript-resolvers
