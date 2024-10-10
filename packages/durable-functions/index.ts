@@ -1,7 +1,6 @@
 import type * as activities from '@repo/activities'
-import { Group, Message, User } from '@repo/common/src/generated/message-types'
+import { Group, Message } from '@repo/common/src/generated/message-types'
 import {
-  ApplicationFailure,
   condition,
   defineQuery,
   defineSignal,
@@ -52,6 +51,7 @@ export async function groupChat(userId: string): Promise<void> {
     addUserToGroup(newUserId)
   })
 
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     await condition(() => group.messages.length > messagesSentToAi)
 

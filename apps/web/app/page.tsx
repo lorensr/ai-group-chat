@@ -6,12 +6,8 @@ import {
   HttpLink,
   InMemoryCache,
   gql,
-  split,
 } from '@apollo/client'
 import { setContext } from '@apollo/client/link/context'
-import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
-import { getMainDefinition } from '@apollo/client/utilities'
-import { createClient } from 'graphql-ws'
 import { useState } from 'react'
 import { ChatEntryForm } from '../components/chat-entry-form'
 import { REPORT_USER_ACTIVITY } from '../components/graphql/mutations'
