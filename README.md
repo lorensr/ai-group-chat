@@ -1,10 +1,11 @@
-AI group chat with: 
+AI group chat with:
 
 - a GraphQL federated subscription for getting messages to the client
 - a durable function for easily maintaining chat state and reliably coordinating with OpenAI
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Contents**
 
 - [Code structure](#code-structure)
@@ -18,7 +19,7 @@ AI group chat with:
 
 ## Code structure
 
-Turborepo monorepo. 
+Turborepo monorepo.
 
 ### Apps
 
