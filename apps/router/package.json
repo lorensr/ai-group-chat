@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "docker:build": "docker build -t router .",
-    "dev": "docker run -it --env-file ../../.env -p4000:4000 router"
+    "dev:docker": "docker run -it --env-file ../../.env -p4000:4000 router",
+    "dev": "rover dev --supergraph-config supergraph.yaml --router-config router.yaml"
   }
 }

@@ -1,6 +1,5 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -16,9 +15,7 @@ import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { REPORT_USER_ACTIVITY } from './graphql/mutations'
-
 import UserAvatar from './user-avatar'
-import OpenAiIcon from './openai-icon' // Assuming you have this component
 
 const GET_GROUP = gql`
   query GetGroup($id: ID!) {

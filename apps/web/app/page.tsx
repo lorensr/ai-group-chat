@@ -91,13 +91,9 @@ export default function Home() {
 
   if (isSubmitted && client) {
     return (
-      // <div className={styles.page}>
-      //   <main className={styles.main}>
       <ApolloProvider client={client}>
         <GroupChat groupName={groupName} userName={userName} />
       </ApolloProvider>
-      //   </main>
-      // </div>
     )
   }
 
