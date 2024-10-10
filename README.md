@@ -6,12 +6,9 @@ AI group chat with:
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-**Contents**
-
 - [Code structure](#code-structure)
   - [Apps](#apps)
   - [Packages](#packages)
-  - [Code of note](#code-of-note)
 - [Set up](#set-up)
 - [Run](#run)
 
@@ -23,29 +20,20 @@ Turborepo monorepo.
 
 ### Apps
 
-- `apps/web` - Next.js client
+- `apps/web` - Next.js client (subscription code: [`components/group-chat.tsx`](apps/web/components/group-chat.tsx))
 - `apps/router` - Apollo router
-- `apps/users-service` - subgraph that resolves the User entity
-- `apps/messages-service` - subgraph that handles Subscriptions and proxies Queries and Mutations to the durable function
+- `apps/users-service` - subgraph that resolves the User entity (see [`index.ts`](apps/users-service/src/index.ts))
+- `apps/messages-service` - subgraph that handles Subscriptions and proxies Queries and Mutations to the durable function ([`index.ts`](apps/messages-service/src/index.ts))
 - `apps/worker` - runs the durable functions
 
 ### Packages
 
-- `packages/common` - types generated from messages schema and supergraph schema
-- `packages/durable-functions` - the `groupChat` durable function
-- `packages/activities` - normal functions called by the durable function
+- `packages/common` - types generated from [messages schema](packages/common/src/messages.graphql) and supergraph schema
+- `packages/durable-functions` - the `groupChat` durable function ([`index.ts`](packages/durable-functions/index.ts))
+- `packages/activities` - normal functions called by the durable function, including AI SDK code that talks to OpenAI ([`index.ts`](packages/activities/index.ts))
 - `packages/ui` - UI components
 - `packages/eslint-config`
 - `packages/typescript-config`
-
-### Code of note
-
-- [apps/web/components/group-chat.tsx](apps/web/components/group-chat.tsx) - Client query, mutation, and subscription
-- [apps/users-service/src/index.ts](apps/users-service/src/index.ts) - Small users subgraph, keeps name and online status
-- [apps/messages-service/src/index.ts](apps/messages-service/src/index.ts) - Messages subgraph, talks to `groupChat` durable function
-- [packages/common/src/messages.graphql](packages/common/src/messages.graphql) - Messages schema
-- [packages/durable-functions/index.ts](packages/durable-functions/index.ts) - `groupChat` durable function
-- [packages/activities/index.ts](packages/activities/index.ts) - AI SDK code that talks to OpenAI
 
 ## Set up
 
