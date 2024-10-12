@@ -23,7 +23,12 @@ import http from 'http'
 import { v4 as uuidv4 } from 'uuid'
 import { WebSocketServer } from 'ws'
 import { Message, Resolvers } from '@repo/common/src/generated/message-types'
-import { getStateRpc, groupChat } from '@repo/durable-functions'
+import {
+  getStateRpc,
+  groupChat,
+  joinGroupRpc,
+  sendMessageRpc,
+} from '@repo/durable-functions'
 
 export interface Context {
   pubsub: PubSub
@@ -66,7 +71,7 @@ const resolvers: Resolvers<Context> = {
       } catch (e) {
         if (e instanceof WorkflowExecutionAlreadyStartedError) {
           // If the workflow already exists, signal to join the group
-          await groupFn.signal('joinGroup', userId)
+          await groupFn.signal(joinGroupRpc, userId)
         } else {
           throw e
         }
@@ -88,7 +93,7 @@ const resolvers: Resolvers<Context> = {
       const isHuman = userId !== 'OpenAI'
       if (isHuman) {
         try {
-          await groupFn.signal('sendMessage', message)
+          await groupFn.signal(sendMessageRpc, message)
         } catch (e) {
           if (e instanceof WorkflowNotFoundError) {
             throw new Error('Group not found')
