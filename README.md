@@ -3,6 +3,8 @@ AI group chat with:
 - a GraphQL federated subscription for getting messages to the client
 - a durable function for easily maintaining chat state and reliably coordinating with OpenAI
 
+Built for GraphQL Summit 2024. Slides [here](http://bit.ly/summit-chat), and more info in [this post](https://temporal.io/blog/durable-execution-in-distributed-systems-increasing-observability) and [this talk](https://www.youtube.com/watch?v=AulAm5BtMXw&list=PL0MRiRrXAvRjMAfx42eiokiAmfclUX-6S&index=16).
+
 **Contents:**
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
